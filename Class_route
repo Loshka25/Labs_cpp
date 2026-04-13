@@ -9,14 +9,14 @@ class route {
 private:
     int* r;     // массив, представляющий маршрут
     int n;      // количество городов
-    
+
 public:
     // Создает начальную перестановку по возрастанию
     route(int num = 0) : n(num) {
         if (n > 0) {
             r = new int[n];
             for (int i = 0; i < n; i++) {
-                r[i] = i;
+                r[i] = i+1;
             }
         }
         else {
@@ -68,13 +68,12 @@ public:
 
         int price = 0;
         for (int i = 0; i < n - 1; i++) {
-            price += costMatrix[r[i]][r[i + 1]];
+            price += costMatrix[r[i] - 1][r[i + 1] - 1];
         }
-        price += costMatrix[r[n - 1]][r[0]];
+        price += costMatrix[r[n - 1] - 1][r[0] - 1];
 
         return price;
     }
-
     // Алгоритм Дейкстры для поиска следующей перестановки
     bool nextRoute() {
         if (n <= 1) return false;
@@ -110,36 +109,21 @@ public:
         return os;
     }
 
-    
+
 
 };
 
-//// Демонстрация работы алгоритма Дейкстры
-//void demonstrateDijkstraAlgorithm() {
-//    cout << "=== ДЕМОНСТРАЦИЯ АЛГОРИТМА ДЕЙКСТРЫ ===" << endl;
-//
-//    route testRoute(4);
-//    cout << "Начальная перестановка: " << testRoute << endl;
-//
-//    int count = 1;
-//    while (testRoute.nextRoute()) {
-//        count++;
-//        cout << "Перестановка " << count << ": " << testRoute << endl;
-//    }
-//
-//    cout << "Всего перестановок: " << count << " (ожидалось: 24)" << endl << endl;
-//
 void printCostMatrix(int** matrix, int n) {
 
     cout << "\nМатрица стоимости (" << n << "x" << n << "):" << endl;
     cout << "   ";
     for (int i = 0; i < n; i++) {
-        cout << i << "\t";
+        cout << i+1 << "\t";
     }
     cout << endl;
 
     for (int i = 0; i < n; i++) {
-        cout << i << "| ";
+        cout << i+1 << "| ";
         for (int j = 0; j < n; j++) {
             cout << matrix[i][j] << "\t";
         }
@@ -147,7 +131,7 @@ void printCostMatrix(int** matrix, int n) {
     }
 }
 int main() {
-    setlocale(LC_ALL,"");
+    setlocale(LC_ALL, "");
     int n;
     cout << "Введите количество городов: ";
     cin >> n;
@@ -164,7 +148,7 @@ int main() {
 
 
     // Выводим матрицу
-    
+
     printCostMatrix(costMatrix, n);
 
     // Решаем задачу полным перебором
@@ -175,7 +159,7 @@ int main() {
     cout << "\nПоиск оптимального маршрута..." << endl;
     cout << "Начальный маршрут: " << currentRoute << " стоимость: " << minPrice
 
-<< endl;
+        << endl;
 
     while (currentRoute.nextRoute()) {
         int currentPrice = currentRoute.routePrice(costMatrix);
