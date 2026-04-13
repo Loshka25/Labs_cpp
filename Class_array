@@ -1,0 +1,412 @@
+
+
+#include <iostream>
+#include <cstring>
+#include <ctime>
+#include <chrono>
+#pragma warning (disable:4996)
+using namespace std::chrono;
+using namespace std;
+
+class Array {
+    int* arr, length;
+public:
+    // Конструктор с параметрами
+    Array(int len = 1, int mode = 1, int range = 10) : length(len) {
+        if (len <= 0) length = 1;
+
+        arr = new int[length] {0};
+        if (mode <= 0 || mode > 3) {
+            cout << "Your mode is incorrect,i choose mode ==1" << endl;
+            mode = 1;
+        }
+        if (mode == 1) {
+            srand(time(0));
+            for (int i = 0; i < length; i++) {
+                arr[i] = rand() % range;
+            }
+        }
+         
+        if (mode == 2) {
+            srand(time(0));
+            arr[0] = rand() % 1000;
+            for (int i = 1; i < length; i++) {
+                arr[i] = arr[i - 1] + rand() % 1000; // Гарантируем неубывание
+                }
+        }
+
+        if(mode==3){
+            srand(time(0));
+            arr[0] = 1000;
+            for (int i = length - 1; i > 0; i--) {
+                arr[i - 1] = arr[i] + rand() % 1000; // Гарантируем невозрастание
+            }
+        }
+        
+    }
+
+    // Конструктор по массиву
+    Array(int* A, int len) {
+        if (len <= 0) { cout << "Dlina menshe nuzhnoy" << endl; exit(1); }
+        length = len;
+        arr = new int[length];
+        for (int i = 0; i < length; i++) {
+            arr[i] = A[i];  // Копируем из внешнего массива
+        }
+    }
+
+    // Копирующий конструктор
+    Array(const Array& other) {
+        length = other.length;
+        arr = new int[length];
+        for (int i = 0; i < length; i++)
+            arr[i] = other.arr[i];
+    }
+
+    // Деструктор
+    ~Array() {
+        delete[] arr;
+    }
+
+    // Оператор присваивания
+    Array& operator=(const Array& other) {
+        if (this != &other) {
+            delete[] arr;
+            length = other.length;
+            arr = new int[length];
+            for (int i = 0; i < length; i++) {
+                arr[i] = other.arr[i];
+            }
+        }
+        return *this;
+    }
+
+    int& operator[](int index) {
+        if (index < 0 || index >= length) {
+            cout << "Index out of bounds" << endl;
+            exit(2);
+        }
+        return arr[index];
+    }
+
+
+    // Проверка на упорядоченность по неубыванию
+    bool isSorted() {
+        for (int i = 1; i < length; i++) {
+            if (arr[i] < arr[i - 1]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+bool operator==(Array other) {    
+    if (length != other.length)    
+        return false;    
+
+    // Создаем копии    
+    Array temparr1(*this);  // Используем конструктор копирования класса
+    Array temparr2(other); 
+
+    // Сортировка пузырьком для copy1    
+    temparr1.HoarSort();
+    temparr2.HoarSort();
+
+
+    // Сравниваем отсортированные массивы    
+    bool ravni = true;    
+    for (int i = 0; i < length; i++) {    
+        if (temparr1[i] != temparr2[i]) {    
+            ravni = false;    
+            break;    
+        }    
+    }
+
+    return ravni;    
+}    
+friend std::istream& operator>>(std::istream& in, Array& a)    
+{    
+    for (int i = 0; i < a.length; i++)    
+        in >> a.arr[i];    
+    return in;    
+}    
+friend std::ostream& operator<<(std::ostream& out, const Array& a)    
+{    
+    out << "[";    
+    for (int i = 0; i < a.length; i++)    
+    {    
+        out << a.arr[i];    
+        if (i != a.length - 1)    
+            out << ", ";    
+    }    
+    out << "]";    
+    return out;    
+}    
+void HoarSort() {    
+    HoarSortRecursive(0, length - 1);    
+}    
+
+// вариант Хоар 3    
+void HoarSortRecursive(int l, int r) {    
+    if (l >= r) {    
+        return;    
+    }    
+
+    int x = arr[(l + r) / 2];    
+
+    int i = l;    
+    int j = r;    
+
+    // Разделение массива на две части    
+    while (i <= j) {    
+        // Пропускаем элементы, которые меньше медианы слева    
+        while (arr[i] < x) {    
+            i++;    
+        }
+
+
+
+        // Пропускаем элементы, которые больше медианы справа    
+        while (arr[j] > x) {    
+            j--;    
+        }    
+
+        // Если нашли пару элементов, которые нужно поменять местами    
+        if (i <= j) {    
+            // Меняем элементы местами    
+            int temp = arr[i];    
+            arr[i] = arr[j];    
+            arr[j] = temp;    
+
+            // Сдвигаем индексы    
+            i++;    
+            j--;    
+        }    
+    }    
+
+    // Рекурсивно сортируем левую часть (если она есть)    
+    if (l < j) {    
+        HoarSortRecursive(l, j);    
+    }    
+
+    // Рекурсивно сортируем правую часть (если она есть)    
+    if (i < r) {    
+        HoarSortRecursive(i, r);    
+    }    
+}
+
+void siftDown(int i, int n) {    
+    int x = arr[i];  // Сохраняем значение просеиваемого элемента    
+    int j;    
+
+    while (2 * i + 1 < n) {  // Пока есть хотя бы один потомок    
+        j = 2 * i + 1;   // Левый потомок    
+
+        // Выбираем большего потомка    
+        if (j + 1 < n && arr[j] < arr[j + 1]) {    
+            j++;    
+        }    
+
+        // Если значение просеиваемого элемента уже больше или равно значению потомка    
+        if (x >= arr[j]) {    
+            break;    
+        }    
+
+        // Просеиваем элемент вниз    
+        arr[i] = arr[j];    
+        i = j;    
+    }    
+
+    arr[i] = x;  // Помещаем элемент на его место    
+}    
+void heapSort() {    
+    // 1. Построение пирамиды (кучи)    
+    // Начинаем с последнего элемента, у которого есть потомки    
+    for (int i = length / 2 - 1; i >= 0; i--) {    
+        siftDown(i, length);    
+    }    
+
+    // 2. Сортировка с использованием пирамиды    
+    for (int i = length - 1; i > 0; i--) {    
+        // Меняем корень пирамиды (максимальный элемент) с последним элементом    
+        int temp = arr[0];    
+        arr[0] = arr[i];    
+        arr[i] = temp;    
+
+        // Просеиваем новый корень через уменьшенную пирамиду    
+        siftDown(0, i);    
+    }    
+}    
+
+    // Публичный метод побитовой сортировки
+    void bitSort() {
+        if (length <= 1) return;
+        
+        // Находим максимальное значение для определения старшего разряда
+        int maxVal = arr[0];
+        for (int i = 1; i < length; i++) {
+            if (arr[i] > maxVal) {
+                maxVal = arr[i];
+            }
+        }
+        
+        // Находим номер старшего разряда (k)
+        int k = 0;
+        while ((1 << (k + 1)) <= maxVal) {
+            k++;
+        }
+        
+        // Вызов: l=0, r=n-1, k=номер старшего разряда
+        bitSortHelp(0, length - 1, k);
+    }
+
+    void bitSortHelp(int l, int r, int k) {
+        // 1. Если l ≥ r или k < 0, то выход.
+        if (l >= r || k < 0) {
+            return;
+        }
+
+        // 2. Установка начальных значений: i = l, j = r.
+        int i = l;
+        int j = r;
+
+        // Создаем маску для проверки k-го разряда (Используем маску!)
+        int mask = 1 << k;
+
+
+        // 3. Пока i ≤ j
+        while (i <= j) {
+            // 3.1 Пока i ≤ j и в k-ом разряде arr[i] ноль, i++
+            while (i <= j && (arr[i] & mask) == 0) {
+                i++;
+            }
+
+            // 3.2 Пока i ≤ j и в k-ом разряде arr[j] единица, j--
+            while (i <= j && (arr[j] & mask) != 0) {
+                j--;
+            }
+
+            // 3.3 Если i < j, то arr[i] ↔️ arr[j], i++, j--
+            if (i < j) {
+                int temp = arr[i];
+                arr[i] = arr[j];
+                arr[j] = temp;
+                i++;
+                j--;
+            }
+        }
+
+        // 4. Выполняем эту же процедуру для фрагмента [l, j] по k-1 разряду.
+        bitSortHelp(l, j, k - 1);
+
+        // 5. Выполняем эту же процедуру для фрагмента [i, r] по k-1 разряду.
+        bitSortHelp(i, r, k - 1);
+    }
+
+
+
+void shellSort() {    
+    int n = length;    
+    // Начать с большого шага, затем уменьшить его          
+    for (int shag = n / 2; shag > 0; shag /= 2) {    
+        // Выполнить сортировку вставками для этого размера шага          
+        for (int i = shag; i < n; i += 1) {    
+            //сохраним i-элемент для последующей вставки        
+            int temp = arr[i]; int j;    
+            for (j = i; j >= shag && arr[j - shag] > temp; j -= shag)//смотрим чтобы мы не вылезли за пределы массива(j >= shag) и сравниваем i и j-шаг элементы        
+                arr[j] = arr[j - shag];//меняем i и j элементы местами        
+            //т.к от j отняли шаг после цикла, то значит мы стоим на том элементе с которым ранее сравнивали и меняем его на i-элемент, если массив отсортирован то замены как таковой не произойдет        
+            arr[j] = temp;    
+        }    
+    }    
+}};  
+  
+
+int main()
+{
+    srand(time(NULL));
+    int choice;
+
+    // Создаем исходный массив
+    Array arr(100000, 3, 10),arr2(arr),arr3(arr),arr4(arr);
+    cout << "1 - Shell sort " << endl;
+    cout << "2 - Hoar sort" << endl;
+    cout << "3 - Heapsort" << endl;
+    cout << "4 - bitsort" << endl;
+    cout << "5 - all" << endl;
+    cin >> choice;
+    
+
+    if (choice == 5)
+    {
+        
+        cout << "\n1. SHELL SORT:" << endl;
+        auto start = high_resolution_clock::now();
+        arr.shellSort();
+        auto end = high_resolution_clock::now();
+        auto time = duration_cast<milliseconds>(end - start);
+        cout << "   Time: " << time.count() << " ms" << endl;
+        cout << "   Sorted: " << (arr.isSorted() ? "Yes" : "No") << endl << endl;
+
+        cout << "2. HOAR SORT:" << endl;
+        start = high_resolution_clock::now();
+        arr2.HoarSort();
+        end = high_resolution_clock::now();
+        time = duration_cast<milliseconds>(end - start);
+        cout << "   Time: " << time.count() << " ms" << endl;
+        cout << "   Sorted: " << (arr2.isSorted() ? "Yes" : "No") << endl << endl;
+
+        cout << "3. HEAP SORT:" << endl;
+        start = high_resolution_clock::now();
+        arr3.heapSort();
+        end = high_resolution_clock::now();
+        time = duration_cast<milliseconds>(end - start);
+        cout << "   Time: " << time.count() << " ms" << endl;
+        cout << "   Sorted: " << (arr3.isSorted() ? "Yes" : "No") << endl << endl;
+        
+        cout << "4. BIT SORT:" << endl;
+        start = high_resolution_clock::now();
+        arr4.bitSort();
+        end = high_resolution_clock::now();
+        time = duration_cast<milliseconds>(end - start);
+        cout << "   Time: " << time.count() << " ms" << endl;
+        cout << "   Sorted: " << (arr4.isSorted() ? "Yes" : "No") << endl << endl;
+            cout <<"arr1==arr2? - "<<(arr==arr2)<<endl;
+    cout <<"arr1==arr3? - "<<(arr==arr3)<<endl;
+    cout <<"arr1==arr4? - "<<(arr==arr4)<<endl;
+    cout <<"arr2==arr3? - "<<(arr2==arr3)<<endl;
+    cout <<"arr2==arr4? - "<<(arr2==arr4)<<endl;
+    cout <<"arr3==arr4? - "<<(arr3==arr4)<<endl<<endl;
+        
+    }
+    else
+    {
+       
+        auto start = high_resolution_clock::now();
+
+        switch (choice)
+        {
+        case 1:
+            arr.shellSort();
+            break;
+        case 2:
+            arr.HoarSort();
+            break;
+        case 3:
+            arr.heapSort();
+            break;
+        case 4:
+            arr.bitSort();
+            break;
+        }
+
+        auto end = high_resolution_clock::now();
+        auto duration = duration_cast<milliseconds>(end - start);
+
+
+        cout << "\nSorting time: " << duration.count() << " milliseconds" << endl;
+        cout << "Array is sorted: " << (arr.isSorted() ? "Yes" : "No") << endl;
+    }
+
+    return 0;
+}
