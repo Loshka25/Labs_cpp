@@ -163,6 +163,7 @@ int main() {
 
     while (currentRoute.nextRoute()) {
         int currentPrice = currentRoute.routePrice(costMatrix);
+        cout << currentRoute << " and " << currentPrice<< endl;
         if (currentPrice < minPrice) {
             minPrice = currentPrice;
             bestRoute = currentRoute;
