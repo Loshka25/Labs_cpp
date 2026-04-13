@@ -1,0 +1,200 @@
+
+#include <iostream>
+#include <algorithm>
+#include <climits>
+
+using namespace std;
+
+class route {
+private:
+    int* r;     // массив, представляющий маршрут
+    int n;      // количество городов
+    
+public:
+    // Создает начальную перестановку по возрастанию
+    route(int num = 0) : n(num) {
+        if (n > 0) {
+            r = new int[n];
+            for (int i = 0; i < n; i++) {
+                r[i] = i;
+            }
+        }
+        else {
+            r = nullptr;
+        }
+    }
+
+    // Конструктор копирования
+    route(const route& other) : n(other.n) {
+        if (n > 0) {
+            r = new int[n];
+            for (int i = 0; i < n; i++) {
+                r[i] = other.r[i];
+            }
+        }
+        else {
+            r = nullptr;
+        }
+    }
+
+    // Операция присваивания
+    route& operator=(const route& other) {
+        if (this != &other) {
+            if (r) delete[] r;
+
+            n = other.n;
+            if (n > 0) {
+                r = new int[n];
+                for (int i = 0; i < n; i++) {
+                    r[i] = other.r[i];
+                }
+            }
+            else {
+                r = nullptr;
+            }
+        }
+        return *this;
+    }
+
+    // Деструктор
+    ~route() {
+        if (r) delete[] r;
+        r = nullptr;
+    }
+
+    // Вычисляет стоимость маршрута по матрице стоимости
+    int routePrice(int** costMatrix) {
+        if (n <= 1) return 0;
+
+        int price = 0;
+        for (int i = 0; i < n - 1; i++) {
+            price += costMatrix[r[i]][r[i + 1]];
+        }
+        price += costMatrix[r[n - 1]][r[0]];
+
+        return price;
+    }
+
+    // Алгоритм Дейкстры для поиска следующей перестановки
+    bool nextRoute() {
+        if (n <= 1) return false;
+
+        int i = n - 2;
+        while (i >= 0 && r[i] >= r[i + 1]) {
+            i--;
+        }
+
+        if (i < 0) return false;
+
+        int j = n - 1;
+        while (r[j] <= r[i]) {
+            j--;
+        }
+
+        swap(r[i], r[j]);
+
+        for (int left = i + 1, right = n - 1; left < right; left++, right--) {
+            swap(r[left], r[right]);
+        }
+
+        return true;
+    }
+
+    // Вывод маршрута
+    friend ostream& operator<<(ostream& os, const route& rt) {
+        for (int i = 0; i < rt.n; i++) {
+            os << rt.r[i];
+            if (i < rt.n - 1) os << " -> ";
+        }
+        os << " -> " << rt.r[0];
+        return os;
+    }
+
+    
+
+};
+
+//// Демонстрация работы алгоритма Дейкстры
+//void demonstrateDijkstraAlgorithm() {
+//    cout << "=== ДЕМОНСТРАЦИЯ АЛГОРИТМА ДЕЙКСТРЫ ===" << endl;
+//
+//    route testRoute(4);
+//    cout << "Начальная перестановка: " << testRoute << endl;
+//
+//    int count = 1;
+//    while (testRoute.nextRoute()) {
+//        count++;
+//        cout << "Перестановка " << count << ": " << testRoute << endl;
+//    }
+//
+//    cout << "Всего перестановок: " << count << " (ожидалось: 24)" << endl << endl;
+//
+void printCostMatrix(int** matrix, int n) {
+
+    cout << "\nМатрица стоимости (" << n << "x" << n << "):" << endl;
+    cout << "   ";
+    for (int i = 0; i < n; i++) {
+        cout << i << "\t";
+    }
+    cout << endl;
+
+    for (int i = 0; i < n; i++) {
+        cout << i << "| ";
+        for (int j = 0; j < n; j++) {
+            cout << matrix[i][j] << "\t";
+        }
+        cout << endl;
+    }
+}
+int main() {
+    setlocale(LC_ALL,"");
+    int n;
+    cout << "Введите количество городов: ";
+    cin >> n;
+
+    // Создаем матрицу расстояний
+    int** costMatrix = new int* [n];
+    cout << "Введите матрицу расстояний " << n << "x" << n << ":" << endl;
+    for (int i = 0; i < n; i++) {
+        costMatrix[i] = new int[n];
+        for (int j = 0; j < n; j++) {
+            costMatrix[i][j] = 1 + rand() % 100;
+        }
+    }
+
+
+    // Выводим матрицу
+    
+    printCostMatrix(costMatrix, n);
+
+    // Решаем задачу полным перебором
+    route currentRoute(n);
+    route bestRoute = currentRoute;
+    int minPrice = currentRoute.routePrice(costMatrix);
+
+    cout << "\nПоиск оптимального маршрута..." << endl;
+    cout << "Начальный маршрут: " << currentRoute << " стоимость: " << minPrice
+
+<< endl;
+
+    while (currentRoute.nextRoute()) {
+        int currentPrice = currentRoute.routePrice(costMatrix);
+        if (currentPrice < minPrice) {
+            minPrice = currentPrice;
+            bestRoute = currentRoute;
+            cout << "Найден лучший маршрут: " << bestRoute << " стоимость: " << minPrice << endl;
+        }
+    }
+
+    cout << "\n=== РЕЗУЛЬТАТ ===" << endl;
+    cout << "Оптимальный маршрут: " << bestRoute << endl;
+    cout << "Минимальная стоимость: " << minPrice << endl;
+
+    // Очистка памяти
+    for (int i = 0; i < n; i++) {
+        delete[] costMatrix[i];
+    }
+    delete[] costMatrix;
+
+    return 0;
+}
