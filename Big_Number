@@ -1,0 +1,401 @@
+#include <iostream>
+#include <cstring>
+#include <cstdlib>
+#include <ctime>
+#include <algorithm>
+
+// Добавляем пространство имен, чтобы не писать std::
+using namespace std;
+
+typedef unsigned short BASE;
+typedef unsigned int DBASE;
+
+#define BASE_SIZE (sizeof(BASE) * 8)
+#define BASE_MAX 65536
+
+class BigNumber {
+private:
+    BASE* coef;
+    int len;
+    int maxLen;
+
+public:
+    // Универсальный конструктор
+    BigNumber(int maxLenParam = 1, bool random = false) {
+        maxLen = (maxLenParam > 0) ? maxLenParam : 1;
+        coef = new BASE[maxLen];
+
+        if (random) {
+            len = maxLen;
+            for (int i = 0; i < maxLen; i++) {
+                // Упростили генерацию случайных чисел
+                coef[i] = rand() % BASE_MAX;
+            }
+        }
+        else {
+            len = 1;
+            for (int i = 0; i < maxLen; i++) {
+                coef[i] = 0;
+            }
+        }
+    }
+
+    BigNumber(const BigNumber& other) {
+        maxLen = other.maxLen;
+        len = other.len;
+        coef = new BASE[maxLen];
+        for (int i = 0; i < len; i++) {
+            coef[i] = other.coef[i];
+        }
+    }
+
+    ~BigNumber() {
+        delete[] coef;
+    }
+
+    BigNumber& operator=(const BigNumber& other) {
+        if (this != &other) {
+            delete[] coef;
+            maxLen = other.maxLen;
+            len = other.len;
+            coef = new BASE[maxLen];
+            for (int i = 0; i < len; i++) {
+                coef[i] = other.coef[i];
+            }
+        }
+        return *this;
+    }
+
+    // Вывод в hex
+    string toHex() const {
+        if (len == 1 && coef[0] == 0) {
+            return "0";
+        }
+
+        int maxStrLen = len * (BASE_SIZE / 4) + 1;
+        char* s = new char[maxStrLen];
+
+        int i = 0;
+        int j = len - 1;
+        int k = BASE_SIZE - 4;
+
+        bool leadingZero = true;
+
+        while (j >= 0) {
+            unsigned int tmp = (coef[j] >> k) & 0xF;
+
+            if (tmp == 0 && leadingZero && j > 0) {
+                k -= 4;
+                if (k < 0) {
+                    k = BASE_SIZE - 4;
+                    j--;
+                }
+                continue;
+            }
+            leadingZero = false;
+
+            if (0 <= tmp && tmp <= 9) {
+                s[i] = (char)(tmp + '0');
+            }
+            else if (10 <= tmp && tmp <= 15) {
+                s[i] = (char)(tmp - 10 + 'a');
+            }
+
+            i++;
+            k -= 4;
+
+            if (k < 0) {
+                k = BASE_SIZE - 4;
+                j--;
+            }
+        }
+
+        s[i] = '\0';
+        string result(s);
+        delete[] s;
+        return result;
+    }
+
+    // Ввод из hex
+    void fromHex(const string& hexStr) {
+        const char* s = hexStr.c_str();
+        int strLen = strlen(s);
+
+        len = (strLen - 1) / (sizeof(BASE) * 2) + 1;
+        maxLen = len;
+
+        delete[] coef;
+        coef = new BASE[maxLen];
+        for (int idx = 0; idx < maxLen; idx++) {
+            coef[idx] = 0;
+        }
+
+        int j = 0;
+        int k = 0;
+        int i = strLen - 1;
+
+        while (i >= 0) {
+            char c = s[i];
+            int tmp = 0;
+
+            if ('0' <= c && c <= '9') {
+                tmp = c - '0';
+            }
+            else if ('a' <= c && c <= 'f') {
+                tmp = c - 'a' + 10;
+            }
+            else if ('A' <= c && c <= 'F') {
+                tmp = c - 'A' + 10;
+            }
+            else {
+                i--;
+                continue;
+            }
+
+            coef[j] |= (BASE)(tmp << k);
+
+            k += 4;
+            if (k >= BASE_SIZE) {
+                k = 0;
+                j++;
+            }
+            i--;
+        }
+
+        while (len > 1 && coef[len - 1] == 0) {
+            len--;
+        }
+    }
+
+    // Операторы ввода/вывода
+    friend istream& operator>>(istream& in, BigNumber& num) {
+        string hexStr;
+        in >> hexStr;
+        num.fromHex(hexStr);
+        return in;
+    }
+
+    friend ostream& operator<<(ostream& out, const BigNumber& num) {
+        out << num.toHex();
+        return out;
+    }
+
+    // Сравнение
+    bool operator==(const BigNumber& other) const {
+        if (len != other.len) return false;
+        for (int i = len - 1; i >= 0; i--) {
+            if (coef[i] != other.coef[i]) return false;
+        }
+        return true;
+    }
+
+    bool operator!=(const BigNumber& other) const { return !(*this == other); }
+
+    bool operator<(const BigNumber& other) const {
+        if (len != other.len) return len < other.len;
+        for (int i = len - 1; i >= 0; i--) {
+            if (coef[i] != other.coef[i]) return coef[i] < other.coef[i];
+        }
+        return false;
+    }
+
+    bool operator<=(const BigNumber& other) const { return *this < other || *this == other; }
+    bool operator>(const BigNumber& other) const { return !(*this <= other); }
+    bool operator>=(const BigNumber& other) const { return !(*this < other); }
+
+    // Сложение
+    BigNumber& operator+=(const BigNumber& other) {
+        int len_u = this->len;
+        int len_v = other.len;
+        int len_min = (len_u < len_v) ? len_u : len_v;
+        int len_max = (len_u > len_v) ? len_u : len_v;
+
+        if (len_max + 1 > this->maxLen) {
+            int newMax = len_max + 1;
+            BASE* newCoef = new BASE[newMax];
+            for (int i = 0; i < len_u; i++) newCoef[i] = this->coef[i];
+            for (int i = len_u; i < newMax; i++) newCoef[i] = 0;
+            delete[] this->coef;
+            this->coef = newCoef;
+            this->maxLen = newMax;
+        }
+
+        DBASE tmp;
+        BASE k = 0;
+        int j = 0;
+
+        while (j < len_min) {
+            tmp = (DBASE)this->coef[j] + (DBASE)other.coef[j] + k;
+            this->coef[j] = (BASE)tmp;
+            k = (BASE)(tmp >> BASE_SIZE);
+            j++;
+        }
+
+        if (j >= len_u) {
+            if (j < len_v) {
+                while (j < len_v) {
+                    tmp = (DBASE)other.coef[j] + k;
+                    this->coef[j] = (BASE)tmp;
+                    k = (BASE)(tmp >> BASE_SIZE);
+                    j++;
+                }
+            }
+        }
+        else {
+            while (j < len_u) {
+                tmp = (DBASE)this->coef[j] + k;
+                this->coef[j] = (BASE)tmp;
+                k = (BASE)(tmp >> BASE_SIZE);
+                j++;
+            }
+        }
+
+        if (k != 0) {
+            this->coef[j] = k;
+            this->len = j + 1;
+        }
+        else {
+            this->len = j;
+        }
+
+        return *this;
+    }
+
+    BigNumber operator+(const BigNumber& other) const {
+        BigNumber result = *this;
+        result += other;
+        return result;
+    }
+
+    BigNumber& operator+=(BASE value) {
+        BigNumber temp(1);
+        temp.coef[0] = value;
+        temp.len = 1;
+        return *this += temp;
+    }
+
+    BigNumber operator+(BASE value) const {
+        BigNumber result = *this;
+        result += value;
+        return result;
+    }
+
+    // Вычитание
+    BigNumber& operator-=(const BigNumber& other) {
+        if (*this < other) {
+            this->len = 1;
+            this->coef[0] = 0;
+            return *this;
+        }
+
+        DBASE tmp;
+        BASE k = 0;
+        int j = 0;
+
+        while (j < other.len) {
+            tmp = ((DBASE)1 << BASE_SIZE) | this->coef[j];
+            tmp = tmp - other.coef[j] - k;
+            this->coef[j] = (BASE)tmp;
+            k = (BASE)(!(tmp >> BASE_SIZE));
+            j++;
+        }
+
+        if (j >= this->len) {
+            goto step_7;
+        }
+
+        while (j < this->len) {
+            tmp = ((DBASE)1 << BASE_SIZE) | this->coef[j];
+            tmp = tmp - k;
+            this->coef[j] = (BASE)tmp;
+            k = (BASE)(!(tmp >> BASE_SIZE));
+            j++;
+        }
+
+    step_7:
+        while (this->len > 1 && this->coef[this->len - 1] == 0) {
+            this->len--;
+        }
+
+        return *this;
+    }
+
+    BigNumber operator-(const BigNumber& other) const {
+        BigNumber result = *this;
+        result -= other;
+        return result;
+    }
+
+    BigNumber& operator-=(BASE value) {
+        BigNumber temp(1);
+        temp.coef[0] = value;
+        temp.len = 1;
+        return *this -= temp;
+    }
+
+    BigNumber operator-(BASE value) const {
+        BigNumber result = *this;
+        result -= value;
+        return result;
+    }
+
+    int getLen() const { return len; }
+    int getMaxLen() const { return maxLen; }
+
+    BASE getCoeff(int index) const {
+        if (index >= 0 && index < len) return coef[index];
+        return 0;
+    }
+};
+
+int main() {
+    // Инициализация генератора случайных чисел
+    srand(time(NULL));
+
+    setlocale(LC_ALL, "Russian");
+
+    cout << "=== Тестирование BigNumber ===" << endl;
+    cout << "BASE_SIZE = " << BASE_SIZE << " бит" << endl;
+    cout << endl;
+
+    // 1. Конструкторы
+    cout << "1) КОНСТРУКТОРЫ:" << endl;
+    BigNumber a;
+    cout << "a = " << a << endl;
+
+    BigNumber b(5);
+    cout << "b = " << b << endl;
+
+    BigNumber c(3, true);
+    cout << "c = " << c << " (random)" << endl;
+
+    BigNumber d = c;
+    cout << "d = " << d << " (копия c)" << endl;
+    cout << endl;
+
+    // 2. Ввод от пользователя
+    cout << "2) ВВОД ОТ ПОЛЬЗОВАТЕЛЯ:" << endl;
+    BigNumber num1;
+    cout << "Введите первое число (hex): ";
+    cin >> num1;
+    cout << "Вы ввели: " << num1 << endl;
+
+    BigNumber num2;
+    cout << "Введите второе число (hex): ";
+    cin >> num2;
+    cout << "Вы ввели: " << num2 << endl;
+    cout << endl;
+
+    // 3. Операции
+    cout << "3) РЕЗУЛЬТАТЫ:" << endl;
+    cout << num1 << " + " << num2 << " = " << (num1 + num2) << endl;
+
+    if (num1 >= num2) {
+        cout << num1 << " - " << num2 << " = " << (num1 - num2) << endl;
+    }
+    else {
+        cout << num1 << " < " << num2 << " (вычитание не выполнено)" << endl;
+    }
+
+    return 0;
+}
