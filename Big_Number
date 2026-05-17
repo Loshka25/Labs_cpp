@@ -4,14 +4,13 @@
 #include <ctime>
 #include <algorithm>
 
-// Добавляем пространство имен, чтобы не писать std::
 using namespace std;
 
-typedef unsigned short BASE;
-typedef unsigned int DBASE;
+typedef unsigned short BASE;//16 бит
+typedef unsigned int DBASE;//32 бит
 
 #define BASE_SIZE (sizeof(BASE) * 8)
-#define BASE_MAX 65536
+#define BASE_MAX 65536//2 в 16 степени
 
 class BigNumber {
 private:
@@ -20,27 +19,25 @@ private:
     int maxLen;
 
 public:
-    // Универсальный конструктор
     BigNumber(int maxLenParam = 1, bool random = false) {
         maxLen = (maxLenParam > 0) ? maxLenParam : 1;
         coef = new BASE[maxLen];
 
         if (random) {
             len = maxLen;
-            for (int i = 0; i < maxLen; i++) {
-                // Упростили генерацию случайных чисел
-                coef[i] = rand() % BASE_MAX;
+            for (int i = 0; i < maxLen; i++) {              
+                coef[i] = rand() % BASE_MAX;//случайная генирация
             }
         }
         else {
             len = 1;
             for (int i = 0; i < maxLen; i++) {
-                coef[i] = 0;
+                coef[i] = 0;//заполнение нулями
             }
         }
     }
 
-    BigNumber(const BigNumber& other) {
+    BigNumber(const BigNumber& other) {//конструктор копирования 
         maxLen = other.maxLen;
         len = other.len;
         coef = new BASE[maxLen];
@@ -54,7 +51,7 @@ public:
     }
 
     BigNumber& operator=(const BigNumber& other) {
-        if (this != &other) {
+        if (this != &other) {//чтобы не удалить самого себя
             delete[] coef;
             maxLen = other.maxLen;
             len = other.len;
@@ -66,25 +63,25 @@ public:
         return *this;
     }
 
-    // Вывод в hex
+    // Вывод в 16 СС(hex)
     string toHex() const {
         if (len == 1 && coef[0] == 0) {
-            return "0";
+            return "0";//частный случай
         }
 
-        int maxStrLen = len * (BASE_SIZE / 4) + 1;
+        int maxStrLen = len * (BASE_SIZE / 4) + 1;//разбираем каждые 4 hex-цифры
         char* s = new char[maxStrLen];
 
-        int i = 0;
-        int j = len - 1;
-        int k = BASE_SIZE - 4;
+        int i = 0;//для строки(вперед)
+        int j = len - 1;//для каждого раздела(назад)
+        int k = BASE_SIZE - 4;//сдвиг на 4 цифры
 
         bool leadingZero = true;
 
         while (j >= 0) {
-            unsigned int tmp = (coef[j] >> k) & 0xF;
+            unsigned int tmp = (coef[j] >> k) & 0xF;//маска 1111
 
-            if (tmp == 0 && leadingZero && j > 0) {
+            if (tmp == 0 && leadingZero && j > 0) {//пропускаем ведущие нули
                 k -= 4;
                 if (k < 0) {
                     k = BASE_SIZE - 4;
@@ -92,9 +89,9 @@ public:
                 }
                 continue;
             }
-            leadingZero = false;
+            leadingZero = false;//всё же нашлось число,а не нуль
 
-            if (0 <= tmp && tmp <= 9) {
+            if (0 <= tmp && tmp <= 9) {//переводим его в символ
                 s[i] = (char)(tmp + '0');
             }
             else if (10 <= tmp && tmp <= 15) {
@@ -121,7 +118,7 @@ public:
         const char* s = hexStr.c_str();
         int strLen = strlen(s);
 
-        len = (strLen - 1) / (sizeof(BASE) * 2) + 1;
+        len = (strLen - 1) / (sizeof(BASE) * 2) + 1;//(длина-1)/4+1
         maxLen = len;
 
         delete[] coef;
@@ -162,7 +159,7 @@ public:
             i--;
         }
 
-        while (len > 1 && coef[len - 1] == 0) {
+        while (len > 1 && coef[len - 1] == 0) {//пока ведущие нули
             len--;
         }
     }
@@ -184,12 +181,12 @@ public:
     bool operator==(const BigNumber& other) const {
         if (len != other.len) return false;
         for (int i = len - 1; i >= 0; i--) {
-            if (coef[i] != other.coef[i]) return false;
+            if (coef[i] != other.coef[i]) return false;//сравниваем с старших коэфов,они в массиве в конце
         }
         return true;
     }
 
-    bool operator!=(const BigNumber& other) const { return !(*this == other); }
+    bool operator!=(const BigNumber& other){ return !(*this == other); }
 
     bool operator<(const BigNumber& other) const {
         if (len != other.len) return len < other.len;
@@ -231,7 +228,7 @@ public:
             j++;
         }
 
-        if (j >= len_u) {
+        if (j >= len_u) {//u короче или равен v
             if (j < len_v) {
                 while (j < len_v) {
                     tmp = (DBASE)other.coef[j] + k;
@@ -242,7 +239,7 @@ public:
             }
         }
         else {
-            while (j < len_u) {
+            while (j < len_u) {//u длиннее v
                 tmp = (DBASE)this->coef[j] + k;
                 this->coef[j] = (BASE)tmp;
                 k = (BASE)(tmp >> BASE_SIZE);
@@ -250,7 +247,7 @@ public:
             }
         }
 
-        if (k != 0) {
+        if (k != 0) {// Если после всех разрядов остался перенос - добавляем новый коэффициент
             this->coef[j] = k;
             this->len = j + 1;
         }
@@ -280,7 +277,6 @@ public:
         return result;
     }
 
-    // Вычитание
     BigNumber& operator-=(const BigNumber& other) {
         if (*this < other) {
             this->len = 1;
@@ -292,6 +288,7 @@ public:
         BASE k = 0;
         int j = 0;
 
+        //Вычитаем общие разряды
         while (j < other.len) {
             tmp = ((DBASE)1 << BASE_SIZE) | this->coef[j];
             tmp = tmp - other.coef[j] - k;
@@ -300,19 +297,18 @@ public:
             j++;
         }
 
-        if (j >= this->len) {
-            goto step_7;
+        //Если у текущего числа остались старшие разряды — обрабатываем их с учётом займа
+        if (j < this->len) {
+            while (j < this->len) {
+                tmp = ((DBASE)1 << BASE_SIZE) | this->coef[j];
+                tmp = tmp - k;
+                this->coef[j] = (BASE)tmp;
+                k = (BASE)(!(tmp >> BASE_SIZE));
+                j++;
+            }
         }
 
-        while (j < this->len) {
-            tmp = ((DBASE)1 << BASE_SIZE) | this->coef[j];
-            tmp = tmp - k;
-            this->coef[j] = (BASE)tmp;
-            k = (BASE)(!(tmp >> BASE_SIZE));
-            j++;
-        }
-
-    step_7:
+        //Убираем ведущие нули
         while (this->len > 1 && this->coef[this->len - 1] == 0) {
             this->len--;
         }
@@ -349,17 +345,11 @@ public:
 };
 
 int main() {
-    // Инициализация генератора случайных чисел
     srand(time(NULL));
-
     setlocale(LC_ALL, "Russian");
-
-    cout << "=== Тестирование BigNumber ===" << endl;
     cout << "BASE_SIZE = " << BASE_SIZE << " бит" << endl;
     cout << endl;
 
-    // 1. Конструкторы
-    cout << "1) КОНСТРУКТОРЫ:" << endl;
     BigNumber a;
     cout << "a = " << a << endl;
 
@@ -370,31 +360,34 @@ int main() {
     cout << "c = " << c << " (random)" << endl;
 
     BigNumber d = c;
-    cout << "d = " << d << " (копия c)" << endl;
+    cout << "d = " << d << " (copy c)" << endl;
+
+    BigNumber e(c);
+    cout << "e = " << e << " (copy c)" << endl;
     cout << endl;
 
-    // 2. Ввод от пользователя
-    cout << "2) ВВОД ОТ ПОЛЬЗОВАТЕЛЯ:" << endl;
     BigNumber num1;
-    cout << "Введите первое число (hex): ";
+    cout << "Введите первое число: ";
     cin >> num1;
-    cout << "Вы ввели: " << num1 << endl;
+    cout << "num1: " << num1 << endl;
 
     BigNumber num2;
-    cout << "Введите второе число (hex): ";
+    cout << "Введите второе число: ";
     cin >> num2;
-    cout << "Вы ввели: " << num2 << endl;
+    cout << "num2: " << num2 << endl;
     cout << endl;
 
-    // 3. Операции
-    cout << "3) РЕЗУЛЬТАТЫ:" << endl;
+    cout << "Results:" << endl;
     cout << num1 << " + " << num2 << " = " << (num1 + num2) << endl;
-
+    if (num1 == num2) {
+        cout << "Numbers is equal" << endl;
+    }
+    else { cout << "NUmbers is not equal" << endl; }
     if (num1 >= num2) {
         cout << num1 << " - " << num2 << " = " << (num1 - num2) << endl;
     }
     else {
-        cout << num1 << " < " << num2 << " (вычитание не выполнено)" << endl;
+        cout << num1 << " < " << num2 << endl;
     }
 
     return 0;
