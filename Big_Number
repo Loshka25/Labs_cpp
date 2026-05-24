@@ -293,7 +293,7 @@ public:
             tmp = ((DBASE)1 << BASE_SIZE) | this->coef[j];
             tmp = tmp - other.coef[j] - k;
             this->coef[j] = (BASE)tmp;
-            k = (BASE)(!(tmp >> BASE_SIZE));
+            k = (BASE)(!(tmp >> BASE_SIZE));//смотрим был ли займ
             j++;
         }
 
@@ -333,6 +333,164 @@ public:
         BigNumber result = *this;
         result -= value;
         return result;
+    }
+    BigNumber& operator*=(BASE value) {
+        if (value == 0) {
+            len = 1;
+            coef[0] = 0;
+            return *this;
+        }
+        if (value == 1) {
+            return *this;
+        }
+
+        // Проверяем, хватит ли памяти (результат может быть на 1 цифру длиннее)
+        if (len + 1 > maxLen) {
+            int newMax = len + 1;
+            BASE* newCoef = new BASE[newMax];
+            for (int i = 0; i < len; i++) newCoef[i] = coef[i];
+            delete[] coef;
+            coef = newCoef;
+            maxLen = newMax;
+        }
+
+        DBASE tmp;
+        BASE k = 0;  // Перенос
+
+        for (int j = 0; j < len; j++) {
+            // Умножаем текущую цифру на value + перенос
+            tmp = (DBASE)coef[j] * (DBASE)value + k;
+            coef[j] = (BASE)tmp;          
+            k = (BASE)(tmp >> BASE_SIZE);//перенос
+        }
+
+        // Если остался перенос, добавляем новую цифру
+        if (k != 0) {
+            coef[len] = k;
+            len++;
+        }
+
+        return *this;
+    }
+
+    BigNumber operator*(BASE value) const {
+        BigNumber result = *this;
+        result *= value;
+        return result;
+    }
+
+    BigNumber& operator*=(const BigNumber& other) {
+        if (other.len == 1 && other.coef[0] == 0) {
+            len = 1;
+            coef[0] = 0;
+            return *this;
+        }
+
+        if (other.len == 1 && other.coef[0] == 1) {
+            return *this;
+        }
+
+        int newLen = this->len + other.len;
+        BASE* tempCoef = new BASE[newLen];
+        for (int i = 0; i < newLen; i++) {
+            tempCoef[i] = 0;
+        }
+
+        DBASE tmp;
+        BASE k;
+
+        for (int j = 0; j < other.len; j++) {
+            if (other.coef[j] == 0) continue;
+
+            k = 0;
+            
+            for (int i = 0; i < this->len; i++) {
+                // w[i+j] += u[i] * v[j] + k
+                tmp = (DBASE)this->coef[i] * (DBASE)other.coef[j] + tempCoef[i + j] + k;
+
+                tempCoef[i + j] = (BASE)tmp;
+                k = (BASE)(tmp >> BASE_SIZE);
+            }
+
+            // Если остался перенос, записываем его
+            if (k != 0) {
+                tempCoef[this->len + j] = k;
+            }
+        }
+        while (len > 1 && coef[len - 1] == 0) {
+            len--;
+        }
+
+        // Обновляем текущий объект
+        delete[] coef;
+        coef = tempCoef;
+        maxLen = newLen;
+        len = newLen;
+
+        return *this;
+    }
+
+    BigNumber operator*(const BigNumber& other) const {
+        BigNumber result = *this;
+        result *= other;
+        return result;
+    }
+    // Деление на цифру
+    BigNumber& operator/=(BASE divisor) {
+        if (divisor == 0) {
+            len = 1;
+            coef[0] = 0;
+            return *this;
+        }
+
+        DBASE tmp;
+        DBASE r = 0;  // Остаток
+
+        // Идем от старшего разряда к младшему
+        for (int j = len - 1; j >= 0; j--) {
+            // tmp = r * BASE + u_j 
+            tmp = (r << BASE_SIZE) | coef[j];
+
+            // Вычисляем цифру частного
+            coef[j] = (BASE)(tmp / divisor);
+
+            // Вычисляем новый остаток
+            r = tmp % divisor;
+        }
+ 
+        while (len > 1 && coef[len - 1] == 0) {
+            len--;
+        }
+
+        return *this;
+    }
+
+    BigNumber operator/(BASE divisor) const {
+            BigNumber result = *this;
+            result /= divisor;
+            return result;
+    }
+
+    // Остаток от деления на цифру
+    BASE operator%(BASE divisor) const {
+        if (divisor == 0) return 0;
+
+        DBASE tmp;
+        DBASE r = 0;
+
+        for (int j = len - 1; j >= 0; j--) {
+            tmp = (r << BASE_SIZE) | coef[j];
+            r = tmp % divisor;
+        }
+
+        return (BASE)r;
+    }
+
+    BigNumber& operator%=(BASE divisor) {
+        BASE rem = *this % divisor;
+        len = 1;
+        coef[0] = rem;
+        return *this;
     }
 
     int getLen() const { return len; }
@@ -375,6 +533,10 @@ int main() {
     cout << "Введите второе число: ";
     cin >> num2;
     cout << "num2: " << num2 << endl;
+    int num3;
+    cout << "Введите третие число(int): ";
+    cin >> num3;
+    cout << "num3: " << num3 << endl;
     cout << endl;
 
     cout << "Results:" << endl;
@@ -382,13 +544,23 @@ int main() {
     if (num1 == num2) {
         cout << "Numbers is equal" << endl;
     }
-    else { cout << "NUmbers is not equal" << endl; }
+    if(num1!=num2) { 
+        cout << "Numbers is not equal" << endl; 
+        if (num1 > num2) {
+            cout << num1 << ">" << num2 << endl;
+        }else cout << num1 << "<" << num2 << endl;
+    }
+
     if (num1 >= num2) {
         cout << num1 << " - " << num2 << " = " << (num1 - num2) << endl;
     }
     else {
         cout << num1 << " < " << num2 << endl;
-    }
-
+    } cout << endl;
+    cout << "Умножение и деление" << endl;
+    cout<< num1 <<"*"<<num3 << " = " << (num1 *= num3) << endl;
+    cout << num1 << "*" << num2 << " = " << (num1 *= num2) << endl;
+    cout << num1 << "/" << num3 << " = " << (num1 /= num3) << endl;
+    cout << num1 << "%" << num3 << " = " << (num1 % num3) << endl;
     return 0;
 }
