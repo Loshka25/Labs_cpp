@@ -6,8 +6,8 @@
 
 using namespace std;
 
-typedef unsigned short BASE;//16 бит
-typedef unsigned int DBASE;//32 бит
+typedef unsigned char BASE;
+typedef unsigned short DBASE;
 
 #define BASE_SIZE (sizeof(BASE) * 8)
 #define BASE_MAX 65536//2 в 16 степени
@@ -25,7 +25,7 @@ public:
 
         if (random) {
             len = maxLen;
-            for (int i = 0; i < maxLen; i++) {              
+            for (int i = 0; i < maxLen; i++) {
                 coef[i] = rand() % BASE_MAX;//случайная генирация
             }
         }
@@ -177,7 +177,8 @@ public:
         return out;
     }
 
-    // Сравнение
+    //#########################################################
+
     bool operator==(const BigNumber& other) const {
         if (len != other.len) return false;
         for (int i = len - 1; i >= 0; i--) {
@@ -186,7 +187,7 @@ public:
         return true;
     }
 
-    bool operator!=(const BigNumber& other){ return !(*this == other); }
+    bool operator!=(const BigNumber& other) { return !(*this == other); }
 
     bool operator<(const BigNumber& other) const {
         if (len != other.len) return len < other.len;
@@ -196,11 +197,20 @@ public:
         return false;
     }
 
-    bool operator<=(const BigNumber& other) const { return *this < other || *this == other; }
-    bool operator>(const BigNumber& other) const { return !(*this <= other); }
+    bool operator>(const BigNumber& other) const {
+        if (len != other.len) return len > other.len;
+        for (int i = len - 1; i >= 0; i--) {
+            if (coef[i] != other.coef[i]) return coef[i] > other.coef[i];
+        }
+        return false;
+    }
+
+    bool operator<=(const BigNumber& other) const { return !(*this > other); }
+  
     bool operator>=(const BigNumber& other) const { return !(*this < other); }
 
-    // Сложение
+    //#########################################################
+    
     BigNumber& operator+=(const BigNumber& other) {
         int len_u = this->len;
         int len_v = other.len;
@@ -228,26 +238,25 @@ public:
             j++;
         }
 
-        if (j >= len_u) {//u короче или равен v
-            if (j < len_v) {
+       
                 while (j < len_v) {
                     tmp = (DBASE)other.coef[j] + k;
                     this->coef[j] = (BASE)tmp;
                     k = (BASE)(tmp >> BASE_SIZE);
                     j++;
                 }
-            }
-        }
-        else {
+            
+        
+        
             while (j < len_u) {//u длиннее v
                 tmp = (DBASE)this->coef[j] + k;
                 this->coef[j] = (BASE)tmp;
                 k = (BASE)(tmp >> BASE_SIZE);
                 j++;
             }
-        }
+        
 
-        if (k != 0) {// Если после всех разрядов остался перенос - добавляем новый коэффициент
+        if (k != 0) {// Если после всех разрядов остался перенос, то добавляем новый коэффициент
             this->coef[j] = k;
             this->len = j + 1;
         }
@@ -278,7 +287,7 @@ public:
     }
 
     BigNumber& operator-=(const BigNumber& other) {
-        if (*this < other) {
+        if (*this < other) {//так как работаем с неотрицательными, то при случае вычитания из меньшего большее возвращаем ноль
             this->len = 1;
             this->coef[0] = 0;
             return *this;
@@ -334,6 +343,7 @@ public:
         result -= value;
         return result;
     }
+    //#########################################################
     BigNumber& operator*=(BASE value) {
         if (value == 0) {
             len = 1;
@@ -347,7 +357,7 @@ public:
         // Проверяем, хватит ли памяти (результат может быть на 1 цифру длиннее)
         if (len + 1 > maxLen) {
             int newMax = len + 1;
-            BASE* newCoef = new BASE[newMax];
+            BASE* newCoef = new BASE[newMax]();
             for (int i = 0; i < len; i++) newCoef[i] = coef[i];
             delete[] coef;
             coef = newCoef;
@@ -360,7 +370,7 @@ public:
         for (int j = 0; j < len; j++) {
             // Умножаем текущую цифру на value + перенос
             tmp = (DBASE)coef[j] * (DBASE)value + k;
-            coef[j] = (BASE)tmp;          
+            coef[j] = (BASE)tmp;
             k = (BASE)(tmp >> BASE_SIZE);//перенос
         }
 
@@ -391,7 +401,7 @@ public:
         }
 
         int newLen = this->len + other.len;
-        BASE* tempCoef = new BASE[newLen];
+        BASE* tempCoef = new BASE[newLen];//массив-результат
         for (int i = 0; i < newLen; i++) {
             tempCoef[i] = 0;
         }
@@ -400,13 +410,14 @@ public:
         BASE k;
 
         for (int j = 0; j < other.len; j++) {
-            if (other.coef[j] == 0) continue;
+            if (other.coef[j] == 0) continue;//пока во втором(нижнем) числе нули, то пропускаем
 
             k = 0;
-            
-            for (int i = 0; i < this->len; i++) {
+
+            for (int i = 0; i < this->len; i++) {//проходимся по всем цифрам первого числа
                 // w[i+j] += u[i] * v[j] + k
                 tmp = (DBASE)this->coef[i] * (DBASE)other.coef[j] + tempCoef[i + j] + k;
+                //к-перенос,temp[i+j]-число, которое ранее в процессе умножения могло попасть в этот разряд
 
                 tempCoef[i + j] = (BASE)tmp;
                 k = (BASE)(tmp >> BASE_SIZE);
@@ -417,16 +428,16 @@ public:
                 tempCoef[this->len + j] = k;
             }
         }
-        while (len > 1 && coef[len - 1] == 0) {
-            len--;
-        }
+        
 
         // Обновляем текущий объект
         delete[] coef;
         coef = tempCoef;
         maxLen = newLen;
         len = newLen;
-
+        while (len > 1 && coef[len - 1] == 0) {
+            len--;
+        }
         return *this;
     }
 
@@ -440,7 +451,7 @@ public:
         if (divisor == 0) {
             len = 1;
             coef[0] = 0;
-            return *this;
+            return *this;//вернуть ошибку
         }
 
         DBASE tmp;
@@ -457,7 +468,7 @@ public:
             // Вычисляем новый остаток
             r = tmp % divisor;
         }
- 
+
         while (len > 1 && coef[len - 1] == 0) {
             len--;
         }
@@ -466,9 +477,9 @@ public:
     }
 
     BigNumber operator/(BASE divisor) const {
-            BigNumber result = *this;
-            result /= divisor;
-            return result;
+        BigNumber result = *this;
+        result /= divisor;
+        return result;
     }
 
     // Остаток от деления на цифру
@@ -483,6 +494,7 @@ public:
             r = tmp % divisor;
         }
 
+
         return (BASE)r;
     }
 
@@ -492,6 +504,8 @@ public:
         coef[0] = rem;
         return *this;
     }
+
+    //#########################################################
 
     int getLen() const { return len; }
     int getMaxLen() const { return maxLen; }
@@ -511,7 +525,7 @@ int main() {
     BigNumber a;
     cout << "a = " << a << endl;
 
-    BigNumber b(5);
+    BigNumber b(5,true);
     cout << "b = " << b << endl;
 
     BigNumber c(3, true);
@@ -544,11 +558,12 @@ int main() {
     if (num1 == num2) {
         cout << "Numbers is equal" << endl;
     }
-    if(num1!=num2) { 
-        cout << "Numbers is not equal" << endl; 
+    if (num1 != num2) {
+        cout << "Numbers is not equal" << endl;
         if (num1 > num2) {
-            cout << num1 << ">" << num2 << endl;
-        }else cout << num1 << "<" << num2 << endl;
+            cout << num1 << " > " << num2 << endl;
+        }
+        else cout << num1 << " < " << num2 << endl;
     }
 
     if (num1 >= num2) {
@@ -557,10 +572,16 @@ int main() {
     else {
         cout << num1 << " < " << num2 << endl;
     } cout << endl;
+    
     cout << "Умножение и деление" << endl;
-    cout<< num1 <<"*"<<num3 << " = " << (num1 *= num3) << endl;
-    cout << num1 << "*" << num2 << " = " << (num1 *= num2) << endl;
-    cout << num1 << "/" << num3 << " = " << (num1 /= num3) << endl;
-    cout << num1 << "%" << num3 << " = " << (num1 % num3) << endl;
+    cout << num1 << " * " << num3 << " = " << (num1 * num3) << endl;
+    cout << num1 << " * " << num2 << " = " << (num1 * num2) << endl;
+    cout << num1 << " / " << num3 << " = " << (num1 / num3) << endl;
+    cout << num1 << " % " << num3 << " = " << (int)(num1 % num3) << endl;
+    cout << "Обратные к умножению и делению" << endl;
+    cout << endl;
+    cout << ((num1 * num3) / num3) << endl;
+    cout << ((num1 / num3) * num3 + (num1 % num3)) << endl;
+    cout << ((num1 / num3) * num3 +(num1 % num3)) << endl;
     return 0;
 }
