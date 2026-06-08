@@ -11,7 +11,7 @@ typedef unsigned short BASE;//16 бит
 typedef unsigned int DBASE;//32 бит
 
 #define BASE_SIZE (sizeof(BASE) * 8)
-#define BASE_MAX 65536//2 в 16 степени
+#define BASE_MAX (((DBASE)1) << BASE_SIZE) 
 
 class BigNumber {
 private:
@@ -80,7 +80,7 @@ public:
         bool leadingZero = true;
 
         while (j >= 0) {
-            unsigned int tmp = (coef[j] >> k) & 0xF;//маска 1111
+            DBASE tmp = ((DBASE)coef[j] >> k) & 0xF;//маска 1111
 
             if (tmp == 0 && leadingZero && j > 0) {//пропускаем ведущие нули
                 k -= 4;
@@ -493,9 +493,8 @@ public:
         coef[0] = rem;
         return *this;
     }
-//####################################################################################
-//####################################################################################
-//####################################################################################
+
+
     BigNumber& operator/=(const BigNumber& divisor) {
  
         if (divisor.len == 1 && divisor.coef[0] == 0) {
@@ -777,7 +776,7 @@ int main() {
     BigNumber a;
     cout << "a = " << a << endl;
 
-    BigNumber b(5);
+    BigNumber b(3, true);
     cout << "b = " << b << endl;
 
     BigNumber c(3, true);
@@ -790,45 +789,13 @@ int main() {
     cout << "e = " << e << " (copy c)" << endl;
     cout << endl;
 
-    BigNumber num1;
-    cout << "Введите первое число: ";
-    cin >> num1;
-    cout << "num1: " << num1 << endl;
-    cout << "num1: " << num1.toTen() << endl;
-
-    BigNumber num2;
-    cout << "Введите второе число: ";
-    cin >> num2;
-    cout << "num2: " << num2 << endl;
-    cout << "num2: " << num2.toTen() << endl;
-    int num3;
-    cout << "Введите третие число(int): ";
-    cin >> num3;
-    cout << "num3: " << num3 << endl;
-    cout << endl;
-
-    cout << "Results:" << endl;
-    cout << num1 << " + " << num2 << " = " << (num1 + num2) << endl;
-    if (num1 == num2) {
-        cout << "Numbers is equal" << endl;
-    }
-    if(num1!=num2) { 
-        cout << "Numbers is not equal" << endl; 
-        if (num1 > num2) {
-            cout << num1 << ">" << num2 << endl;
-        }else cout << num1 << "<" << num2 << endl;
-    }
-
-    if (num1 >= num2) {
-        cout << num1 << " - " << num2 << " = " << (num1 - num2) << endl;
-    }
-    else {
-        cout << num1 << " < " << num2 << endl;
-    } cout << endl;
     cout << "Умножение и деление" << endl;
-    cout<< num1 <<"*"<<num3 << " = " << (num1 *= num3) << endl;
-    cout << num1 << "*" << num2 << " = " << (num1 *= num2) << endl;
-    cout << num1 << "/" << num3 << " = " << (num1 /= num3) << endl;
-    cout << num1 << "%" << num3 << " = " << (num1 % num3) << endl;
+    cout<< b <<"*"<<c << " = " << (b * c) << endl;
+    cout << b << "/" << c << " = " << (b / c) << endl;
+    cout << b << "%" << c << " = " << (b % c) << endl;
+     cout << "Умножение и деление" << endl;
+     cout<< b <<"*"<<c << " = " << (b * c)/c << endl;
+    cout << b << "/" << c << " = " << (b / c)*c+(b%c) << endl;
+    cout << b << "%" << c << " = " <<  (b / c)*c+(b%c) << endl;
     return 0;
 }
