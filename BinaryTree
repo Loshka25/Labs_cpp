@@ -1,0 +1,342 @@
+#include <iostream>
+#include <queue>
+#include <cstdlib>
+#include <ctime>
+
+using namespace std;
+
+// Структура узла дерева
+struct Node {
+    int data;
+    Node* left;
+    Node* right;
+
+    Node(int value) : data(value), left(nullptr), right(nullptr) {}
+};
+
+class BinarySearchTree {
+private:
+    Node* root;
+
+    // Вспомогательная функция для удаления дерева
+    void destroyTree(Node* node) {
+        if (node == nullptr) return;
+        destroyTree(node->left);
+        destroyTree(node->right);
+        delete node;
+    }
+
+    // Вспомогательная функция для копирования дерева
+    Node* copyTree(Node* node) {
+        if (node == nullptr) return nullptr;
+        Node* newNode = new Node(node->data);
+        newNode->left = copyTree(node->left);
+        newNode->right = copyTree(node->right);
+        return newNode;
+    }
+
+    // Поиск узла
+    Node* search(Node* node, int key) {
+        if (node == nullptr || node->data == key)
+            return node;
+
+        if (key < node->data)
+            return search(node->left, key);
+        else
+            return search(node->right, key);
+    }
+
+    // Поиск минимума
+    Node* findMin(Node* node) {
+        while (node && node->left != nullptr)
+            node = node->left;
+        return node;
+    }
+
+    // Поиск максимума
+    Node* findMax(Node* node) {
+        while (node && node->right != nullptr)
+            node = node->right;
+        return node;
+    }
+
+    // Вставка узла
+    Node* insert(Node* node, int value) {
+        if (node == nullptr)
+            return new Node(value);
+
+        if (value < node->data)
+            node->left = insert(node->left, value);
+        else if (value > node->data)
+            node->right = insert(node->right, value);
+
+        return node;
+    }
+
+    // Удаление узла
+    Node* remove(Node* node, int key) {
+        if (node == nullptr) return node;
+
+        if (key < node->data) {
+            node->left = remove(node->left, key);
+        }
+        else if (key > node->data) {
+            node->right = remove(node->right, key);
+        }
+        else {
+            // Узел найден
+            if (node->left == nullptr) {
+                Node* temp = node->right;
+                delete node;
+                return temp;
+            }
+            else if (node->right == nullptr) {
+                Node* temp = node->left;
+                delete node;
+                return temp;
+            }
+
+            // Узел с двумя детьми
+            Node* temp = findMin(node->right);
+            node->data = temp->data;
+            node->right = remove(node->right, temp->data);
+        }
+        return node;
+    }
+
+    // Обход в ширину (по уровням)
+    void breadthFirstTraversal(Node* node) {
+        if (node == nullptr) return;
+
+        queue<Node*> q;
+        q.push(node);
+
+        while (!q.empty()) {
+            Node* current = q.front();
+            q.pop();
+            cout << current->data << " ";
+
+            if (current->left != nullptr)
+                q.push(current->left);
+            if (current->right != nullptr)
+                q.push(current->right);
+        }
+    }
+
+    // Обход в высоту (ЛПК - симметричный/in-order)
+    void depthFirstTraversal(Node* node) {
+        if (node == nullptr) return;
+
+        depthFirstTraversal(node->left);
+        cout << node->data << " ";
+        depthFirstTraversal(node->right);
+    }
+
+public:
+    // 1. Конструктор по умолчанию
+    BinarySearchTree() : root(nullptr) {
+        cout << "Создано пустое дерево" << endl;
+    }
+
+    // 2. Конструктор с массивом
+    BinarySearchTree(int arr[], int size) : root(nullptr) {
+        cout << "Создание дерева из массива..." << endl;
+        for (int i = 0; i < size; i++) {
+            root = insert(root, arr[i]);
+        }
+    }
+
+    // 3. Конструктор со случайными значениями
+    BinarySearchTree(int count) : root(nullptr) {
+        cout << "Создание дерева с " << count << " случайными узлами..." << endl;
+        srand(time(0));
+        for (int i = 0; i < count; i++) {
+            int value = rand() % 100; // числа от 0 до 99
+            root = insert(root, value);
+        }
+    }
+
+    // 4. Конструктор копирования
+    BinarySearchTree(const BinarySearchTree& other) {
+        cout << "Копирование дерева..." << endl;
+        root = copyTree(other.root);
+    }
+
+    // Деструктор
+    ~BinarySearchTree() {
+        cout << "Удаление дерева..." << endl;
+        destroyTree(root);
+    }
+
+    // Оператор присваивания
+    BinarySearchTree& operator=(const BinarySearchTree& other) {
+        if (this != &other) {
+            destroyTree(root);
+            root = copyTree(other.root);
+        }
+        return *this;
+    }
+
+    // Поиск узла по ключу
+    bool search(int key) {
+        return search(root, key) != nullptr;
+    }
+
+    // Добавление узла
+    void insert(int value) {
+        root = insert(root, value);
+    }
+
+    // Удаление узла
+    void remove(int key) {
+        root = remove(root, key);
+    }
+
+    // Минимум
+    int getMin() {
+        Node* minNode = findMin(root);
+        return minNode ? minNode->data : -1;
+    }
+
+    // Максимум
+    int getMax() {
+        Node* maxNode = findMax(root);
+        return maxNode ? maxNode->data : -1;
+    }
+
+    // Обход в ширину
+    void printBFS() {
+        cout << "Обход в ширину: ";
+        breadthFirstTraversal(root);
+        cout << endl;
+    }
+
+    // Обход в высоту (ЛПК)
+    void printDFS() {
+        cout << "Обход ЛПК (in-order): ";
+        depthFirstTraversal(root);
+        cout << endl;
+    }
+
+    // Проверка на пустоту
+    bool isEmpty() {
+        return root == nullptr;
+    }
+};
+
+// ==================== ГЛАВНАЯ ФУНКЦИЯ ====================
+int main() {
+    setlocale(LC_ALL, "Russian");
+
+    cout << "=== БИНАРНОЕ ДЕРЕВО ПОИСКА ===" << endl << endl;
+
+    BinarySearchTree tree;
+
+    int choice, value;
+
+    do {
+        cout << "\n--- МЕНЮ ---" << endl;
+        cout << "1. Добавить узел" << endl;
+        cout << "2. Удалить узел" << endl;
+        cout << "3. Поиск узла" << endl;
+        cout << "4. Найти минимум" << endl;
+        cout << "5. Найти максимум" << endl;
+        cout << "6. Обход в ширину" << endl;
+        cout << "7. Обход в высоту (ЛПК)" << endl;
+        cout << "8. Создать дерево из массива" << endl;
+        cout << "9. Создать дерево со случайными значениями" << endl;
+        cout << "10. Копировать дерево" << endl;
+        cout << "0. Выход" << endl;
+        cout << "Выбор: ";
+        cin >> choice;
+
+        switch (choice) {
+        case 1:
+            cout << "Введите значение: ";
+            cin >> value;
+            tree.insert(value);
+            cout << "Узел добавлен!" << endl;
+            break;
+
+        case 2:
+            cout << "Введите значение для удаления: ";
+            cin >> value;
+            tree.remove(value);
+            cout << "Узел удален!" << endl;
+            break;
+
+        case 3:
+            cout << "Введите значение для поиска: ";
+            cin >> value;
+            if (tree.search(value))
+                cout << "Узел найден!" << endl;
+            else
+                cout << "Узел не найден!" << endl;
+            break;
+
+        case 4:
+            if (!tree.isEmpty())
+                cout << "Минимум: " << tree.getMin() << endl;
+            else
+                cout << "Дерево пустое!" << endl;
+            break;
+
+        case 5:
+            if (!tree.isEmpty())
+                cout << "Максимум: " << tree.getMax() << endl;
+            else
+                cout << "Дерево пустое!" << endl;
+            break;
+
+        case 6:
+            tree.printBFS();
+            break;
+
+        case 7:
+            tree.printDFS();
+            break;
+
+        case 8: {
+            int size;
+            cout << "Введите размер массива: ";
+            cin >> size;
+            int* arr = new int[size];
+            cout << "Введите " << size << " элементов: ";
+            for (int i = 0; i < size; i++)
+                cin >> arr[i];
+
+            tree = BinarySearchTree(arr, size);
+            delete[] arr;
+            break;
+        }
+
+        case 9: {
+            int count;
+            cout << "Введите количество узлов: ";
+            cin >> count;
+            tree = BinarySearchTree(count);
+            break;
+        }
+
+        case 10: {
+            BinarySearchTree copyTree = tree;
+            cout << "Дерево скопировано!" << endl;
+            cout << "Оригинал: ";
+            tree.printDFS();
+            cout << "Копия: ";
+            copyTree.printDFS();
+            break;
+        }
+
+        case 0:
+            cout << "Выход из программы..." << endl;
+            break;
+
+        default:
+            cout << "Неверный выбор!" << endl;
+        }
+
+    } while (choice != 0);
+
+    return 0;
+}
