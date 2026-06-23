@@ -5,7 +5,6 @@
 
 using namespace std;
 
-// Структура узла дерева
 struct Node {
     int data;
     Node* left;
@@ -14,7 +13,7 @@ struct Node {
     Node(int value) : data(value), left(nullptr), right(nullptr) {}
 };
 
-class BinarySearchTree {
+class BST {
 private:
     Node* root;
 
@@ -35,17 +34,6 @@ private:
         return newNode;
     }
 
-    // Поиск узла
-    Node* search(Node* node, int key) {
-        if (node == nullptr || node->data == key)
-            return node;
-
-        if (key < node->data)
-            return search(node->left, key);
-        else
-            return search(node->right, key);
-    }
-
     // Поиск минимума
     Node* findMin(Node* node) {
         while (node && node->left != nullptr)
@@ -60,52 +48,8 @@ private:
         return node;
     }
 
-    // Вставка узла
-    Node* insert(Node* node, int value) {
-        if (node == nullptr)
-            return new Node(value);
-
-        if (value < node->data)
-            node->left = insert(node->left, value);
-        else if (value > node->data)
-            node->right = insert(node->right, value);
-
-        return node;
-    }
-
-    // Удаление узла
-    Node* remove(Node* node, int key) {
-        if (node == nullptr) return node;
-
-        if (key < node->data) {
-            node->left = remove(node->left, key);
-        }
-        else if (key > node->data) {
-            node->right = remove(node->right, key);
-        }
-        else {
-            // Узел найден
-            if (node->left == nullptr) {
-                Node* temp = node->right;
-                delete node;
-                return temp;
-            }
-            else if (node->right == nullptr) {
-                Node* temp = node->left;
-                delete node;
-                return temp;
-            }
-
-            // Узел с двумя детьми
-            Node* temp = findMin(node->right);
-            node->data = temp->data;
-            node->right = remove(node->right, temp->data);
-        }
-        return node;
-    }
-
-    // Обход в ширину (по уровням)
-    void breadthFirstTraversal(Node* node) {
+    // Обход в ширину
+    void BFS(Node* node) {
         if (node == nullptr) return;
 
         queue<Node*> q;
@@ -123,98 +67,210 @@ private:
         }
     }
 
-    // Обход в высоту (ЛПК - симметричный/in-order)
-    void depthFirstTraversal(Node* node) {
+    // Обход в высоту (ЛПК)
+    void DFS(Node* node) {
         if (node == nullptr) return;
 
-        depthFirstTraversal(node->left);
+        DFS(node->left);
+        DFS(node->right);
         cout << node->data << " ";
-        depthFirstTraversal(node->right);
+        
+    }
+
+    void printBST(Node* q, int level) const {
+        if (q == nullptr) {
+            return;
+        }
+        printBST(q->right, level + 1);
+
+        //отступы
+        for (int i = 0; i < level; i++) {
+            cout << "   "; 
+        }
+
+        cout << q->data << endl;
+
+        printBST(q->left, level + 1);
     }
 
 public:
-    // 1. Конструктор по умолчанию
-    BinarySearchTree() : root(nullptr) {
+    BST() : root(nullptr) {
         cout << "Создано пустое дерево" << endl;
     }
 
-    // 2. Конструктор с массивом
-    BinarySearchTree(int arr[], int size) : root(nullptr) {
+    BST(int arr[], int size) : root(nullptr) {
         cout << "Создание дерева из массива..." << endl;
         for (int i = 0; i < size; i++) {
-            root = insert(root, arr[i]);
+            insert(arr[i]);
         }
     }
 
-    // 3. Конструктор со случайными значениями
-    BinarySearchTree(int count) : root(nullptr) {
+    BST(int count) : root(nullptr) {
         cout << "Создание дерева с " << count << " случайными узлами..." << endl;
         srand(time(0));
         for (int i = 0; i < count; i++) {
-            int value = rand() % 100; // числа от 0 до 99
-            root = insert(root, value);
+            int value = rand() % 100 + 1;
+            insert(value);
         }
     }
+   
+    ~BST() {
+        cout << "Удаление дерева" << endl;
+        destroyTree(root);
+    }
 
-    // 4. Конструктор копирования
-    BinarySearchTree(const BinarySearchTree& other) {
+    //#############################################################################################
+    //#############################################################################################
+    //#############################################################################################
+
+    BST(const BST& other) {
         cout << "Копирование дерева..." << endl;
         root = copyTree(other.root);
     }
 
-    // Деструктор
-    ~BinarySearchTree() {
-        cout << "Удаление дерева..." << endl;
-        destroyTree(root);
-    }
-
-    // Оператор присваивания
-    BinarySearchTree& operator=(const BinarySearchTree& other) {
+    BST& operator=(const BST& other) {
         if (this != &other) {
             destroyTree(root);
             root = copyTree(other.root);
         }
         return *this;
     }
+    
+    //#############################################################################################
+    //#############################################################################################
+    //#############################################################################################
 
-    // Поиск узла по ключу
-    bool search(int key) {
-        return search(root, key) != nullptr;
-    }
-
-    // Добавление узла
-    void insert(int value) {
-        root = insert(root, value);
-    }
-
-    // Удаление узла
-    void remove(int key) {
-        root = remove(root, key);
-    }
-
-    // Минимум
     int getMin() {
         Node* minNode = findMin(root);
         return minNode ? minNode->data : -1;
     }
 
-    // Максимум
     int getMax() {
         Node* maxNode = findMax(root);
         return maxNode ? maxNode->data : -1;
     }
 
+    bool search(int key) {
+        Node* current = root;
+        while (current != nullptr) {
+            if (current->data == key)
+                return true;
+            if (key < current->data)
+                current = current->left;
+            else
+                current = current->right;
+        }
+        return false;
+    }
+
+    // Вставка узла
+    void insert(int value) {
+        if (root == nullptr) {
+            root = new Node(value);
+            return;
+        }
+
+        Node* current = root;
+        while (true) {
+            if (value < current->data) {
+                if (current->left == nullptr) {
+                    current->left = new Node(value);
+                    return;
+                }
+                current = current->left;
+            }
+            else if (value > current->data) {
+                if (current->right == nullptr) {
+                    current->right = new Node(value);
+                    return;
+                }
+                current = current->right;
+            }
+            else {
+                return;
+            }
+        }
+    }
+
+    // Удаление узла
+    void remove(int key) {
+        if (root == nullptr) return;
+
+        Node* n = root;
+        Node* parent_n = nullptr;
+        bool is_left_child = false;
+
+        while (n != nullptr && n->data != key) {
+            parent_n = n;
+            if (key < n->data) {
+                n = n->left;
+                is_left_child = true;
+            }
+            else {
+                n = n->right;
+                is_left_child = false;
+            }
+        }
+
+        if (n == nullptr) return;
+
+        Node* rn = nullptr;
+
+        if (n->left == nullptr || n->right == nullptr) {
+            rn = (n->left != nullptr) ? n->left : n->right;
+        }
+        else {
+            rn = n->right;
+
+            if (rn->left == nullptr) {
+                rn->left = n->left;
+            }
+            else {
+                Node* rp = rn;
+                rn = rn->left;
+                while (rn->left != nullptr) {
+                    rp = rn;
+                    rn = rn->left;
+                }
+
+                rp->left = rn->right;
+
+                rn->left = n->left;
+                rn->right = n->right;
+            }
+        }
+
+        if (parent_n == nullptr) {
+            root = rn;
+        }
+        else {
+            if (is_left_child) {
+                parent_n->left = rn;
+            }
+            else {
+                parent_n->right = rn;
+            }
+        }
+
+        delete n;
+    }
+
+    //#############################################################################################
+    //#############################################################################################
+    //#############################################################################################
+    
+
     // Обход в ширину
     void printBFS() {
         cout << "Обход в ширину: ";
-        breadthFirstTraversal(root);
+        BFS(root);
         cout << endl;
     }
 
-    // Обход в высоту (ЛПК)
+    // Обход в глубину (ЛПК)
     void printDFS() {
-        cout << "Обход ЛПК (in-order): ";
-        depthFirstTraversal(root);
+        cout << "Обход ЛПК: ";
+        DFS(root);
         cout << endl;
     }
 
@@ -222,20 +278,26 @@ public:
     bool isEmpty() {
         return root == nullptr;
     }
+    // Публичный метод для запуска повёрнутого вывода
+    void printBST() const {
+        if (root == nullptr) {
+            cout << "Дерево пустое!" << endl;
+            return;
+        }
+        cout << "\n=== Повёрнутое дерево (корень слева, правое сверху) ===\n";
+        printBST(root, 0);
+        cout << "=== Конец дерева ===\n";
+    }
 };
 
-// ==================== ГЛАВНАЯ ФУНКЦИЯ ====================
 int main() {
     setlocale(LC_ALL, "Russian");
 
-    cout << "=== БИНАРНОЕ ДЕРЕВО ПОИСКА ===" << endl << endl;
-
-    BinarySearchTree tree;
+    BST tree;
 
     int choice, value;
 
     do {
-        cout << "\n--- МЕНЮ ---" << endl;
         cout << "1. Добавить узел" << endl;
         cout << "2. Удалить узел" << endl;
         cout << "3. Поиск узла" << endl;
@@ -246,6 +308,7 @@ int main() {
         cout << "8. Создать дерево из массива" << endl;
         cout << "9. Создать дерево со случайными значениями" << endl;
         cout << "10. Копировать дерево" << endl;
+        cout << "11. Вывести дерево" << endl;
         cout << "0. Выход" << endl;
         cout << "Выбор: ";
         cin >> choice;
@@ -305,7 +368,7 @@ int main() {
             for (int i = 0; i < size; i++)
                 cin >> arr[i];
 
-            tree = BinarySearchTree(arr, size);
+            tree = BST(arr, size);
             delete[] arr;
             break;
         }
@@ -314,12 +377,12 @@ int main() {
             int count;
             cout << "Введите количество узлов: ";
             cin >> count;
-            tree = BinarySearchTree(count);
+            tree = BST(count);
             break;
         }
 
         case 10: {
-            BinarySearchTree copyTree = tree;
+            BST copyTree = tree;
             cout << "Дерево скопировано!" << endl;
             cout << "Оригинал: ";
             tree.printDFS();
@@ -327,6 +390,10 @@ int main() {
             copyTree.printDFS();
             break;
         }
+
+        case 11:
+            tree.printBST();
+            break;
 
         case 0:
             cout << "Выход из программы..." << endl;
